@@ -1,0 +1,1 @@
+![tables_schema.png](tables_schema.png)
