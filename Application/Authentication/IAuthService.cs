@@ -4,5 +4,6 @@ namespace Application.Authentication;
 
 public interface IAuthService
 {
-    bool IsAuthenticated(AuthRequest request);
+    string Authenticate(AuthRequest request);
+    bool IsAuthenticated(string token);
 }
