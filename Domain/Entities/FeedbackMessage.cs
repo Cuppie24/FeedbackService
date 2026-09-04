@@ -5,7 +5,7 @@ namespace Domain.Entities;
 public class FeedbackMessage
 {
     public int Id { get; set; }
-    [MaxLength(10000)] public string? Text { get; set; }
+    [MaxLength(10000)] public string Text { get; set; } = null!;
     public int UserId { get; set; }
     public int FeedbackId { get; set; }
     public DateTime SentAt { get; set; }
