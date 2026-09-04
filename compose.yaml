@@ -1,0 +1,16 @@
+services:
+  testDb:
+    image: mysql:9.2.0
+    container_name: testDb
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: feedback
+      MYSQL_USER: ishnazarov.saidnazar
+      MYSQL_PASSWORD: bobojonovagu
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
