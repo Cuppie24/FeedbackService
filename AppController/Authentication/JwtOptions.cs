@@ -2,7 +2,7 @@
 
 namespace AppController.Authentication;
 
-public abstract class JwtOptions
+public class JwtOptions
 {
     public string Issuer { get; set; } = null!;
     public string Audience { get; set; } = null!;

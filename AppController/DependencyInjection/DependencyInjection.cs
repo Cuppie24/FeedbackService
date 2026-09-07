@@ -8,7 +8,7 @@ namespace AppController.DependencyInjection;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddAuthentication(this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection AddAuth(this IServiceCollection services, IConfiguration config)
     {
         var jwtOptions = config.GetSection("Jwt");
         ValidateJwtOptions(jwtOptions);
