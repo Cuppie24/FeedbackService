@@ -127,7 +127,7 @@ public class AuthNService(
         var payload = new
         {
             sub = user.Id,
-            name = user.Name,
+            name = user.Username,
             iss = jwtOptions.Value.Issuer,
             aud = jwtOptions.Value.Audience,
             exp = DateTimeOffset.UtcNow.AddMinutes(jwtOptions.Value.ExpiresInMinutes).ToUnixTimeSeconds()

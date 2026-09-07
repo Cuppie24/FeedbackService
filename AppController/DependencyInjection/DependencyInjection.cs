@@ -8,6 +8,12 @@ namespace AppController.DependencyInjection;
 
 public static class DependencyInjection
 {
+    public static IServiceCollection AddControllerServices(this IServiceCollection services)
+    {
+        services.AddScoped<IAuthNService, AuthNService>();
+        return services;
+    }
+    
     public static IServiceCollection AddAuth(this IServiceCollection services, IConfiguration config)
     {
         var jwtOptions = config.GetSection("Jwt");

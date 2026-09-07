@@ -1,15 +1,18 @@
 using System.Runtime.CompilerServices;
 using AppController.DependencyInjection;
+using Application;
 using Application.Crypto;
+using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddControllerServices();
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddControllers();
 
-//todo remove
-builder.Services.AddScoped<ICryptoService, CryptoService>();
 
 var app = builder.Build();
 
@@ -25,12 +28,5 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-
-var scope = app.Services.CreateScope();
-var cryptoService = scope.ServiceProvider.GetRequiredService<ICryptoService>();
-Console.WriteLine("Enter password");
-var inputPassword = Console.ReadLine();
-var result = cryptoService.Md5Hash(inputPassword ?? "");
-Console.WriteLine($"Password: {result}");
 
 app.Run();
