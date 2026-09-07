@@ -1,6 +1,6 @@
 ﻿namespace Application.EntityServices.User;
 
-public interface IUserRepository
+public interface IUserRepo
 {
     Task<Domain.Entities.User?> GetUser(int id);
 }

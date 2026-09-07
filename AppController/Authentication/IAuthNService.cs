@@ -7,5 +7,5 @@ public interface IAuthNService
     /// <returns>Jwt token on successful authentication</returns>
     Task<string?> AuthenticateAsync(AuthRequest request);
     bool IsAuthenticated(string token);
-    Task<string> Refresh(string refreshToken);
+    Task<TokenRefreshResponse?> Refresh(string refreshToken);
 }

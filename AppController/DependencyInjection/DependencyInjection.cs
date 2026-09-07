@@ -13,6 +13,9 @@ public static class DependencyInjection
         var jwtOptions = config.GetSection("Jwt");
         ValidateJwtOptions(jwtOptions);
         
+        services.AddOptionsWithValidateOnStart<JwtOptions>()
+            .BindConfiguration("Jwt");
+        
         var key = Encoding.UTF8.GetBytes(jwtOptions["IssuerSigningKey"]!);
         services.AddAuthentication(options =>
             {

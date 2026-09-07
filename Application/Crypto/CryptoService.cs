@@ -19,4 +19,27 @@ public class CryptoService : ICryptoService
     {
         throw new NotImplementedException();
     }
+    
+    public string Base64UrlEncode(byte[] input)
+    {
+        return Convert.ToBase64String(input)
+            .Replace('+', '-')
+            .Replace('/', '_')
+            .TrimEnd('=');
+    }
+
+    public byte[] Base64UrlDecode(string input)
+    {
+        string padded = input
+            .Replace('-', '+')
+            .Replace('_', '/');
+
+        switch (padded.Length % 4)
+        {
+            case 2: padded += "=="; break;
+            case 3: padded += "="; break;
+        }
+
+        return Convert.FromBase64String(padded);
+    }
 }
