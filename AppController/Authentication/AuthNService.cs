@@ -21,18 +21,17 @@ public class AuthNService(
 {
     public async Task<string?> AuthenticateAsync(AuthRequest request)
     {
-        var user = await userRepo.GetUser(request.UserId);
+        var user = await userRepo.GetUserByUsername(request.Username);
         if (user is null)
         {
-            logger.LogError("User {RequestUsername} id:{RequestUserId} not found on authenticate try", request.Username,
-                request.UserId);
+            logger.LogError("User {RequestUsername} not found on authenticate try", request.Username);
             return null;
         }
-
-        var hash = cryptoService.Md5Hash(request.Password);
+        
+        var hash = cryptoService.Md5Hash(request.Password + request.Username?.ToUpper());
         if (hash.Equals(user.PasswordHash))
             return GenerateToken(user);
-        logger.LogWarning("Failed to authenticate user {UserId}", request.UserId);
+        logger.LogWarning("Failed to authenticate user {Username}", request.Username);
         return null;
     }
 
@@ -52,7 +51,7 @@ public class AuthNService(
             return false;
         }
 
-        var hash = cryptoService.HmacSha256Hash(string.Concat(tokenParts[0], ".", tokenParts[1]), issuerSigningKey);
+        var hash = cryptoService.HS256Hash(string.Concat(tokenParts[0], ".", tokenParts[1]), issuerSigningKey);
         if (!CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(hash),
                Encoding.UTF8.GetBytes(tokenParts[2])))
@@ -98,7 +97,7 @@ public class AuthNService(
         {
             UserId = oldRefreshToken.UserId,
             Token = refreshTokenText,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(jwtOptions.Value.RefreshExpiresInMinutes),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(jwtOptions.Value.RefreshExpiresMinutes),
             ReplacedByTokenId = null,
             IsRevoked = false,
             RevokedAt = null,
@@ -130,7 +129,7 @@ public class AuthNService(
             name = user.Username,
             iss = jwtOptions.Value.Issuer,
             aud = jwtOptions.Value.Audience,
-            exp = DateTimeOffset.UtcNow.AddMinutes(jwtOptions.Value.ExpiresInMinutes).ToUnixTimeSeconds()
+            exp = DateTimeOffset.UtcNow.AddMinutes(jwtOptions.Value.ExpireMinutes).ToUnixTimeSeconds()
         };
 
         var headerJson = JsonSerializer.Serialize(header);
@@ -138,7 +137,7 @@ public class AuthNService(
 
         var base64Header = cryptoService.Base64UrlEncode(Encoding.UTF8.GetBytes(headerJson ?? ""));
         var base64Payload = cryptoService.Base64UrlEncode(Encoding.UTF8.GetBytes(payloadJson ?? ""));
-        var base64Signature = cryptoService.HmacSha256Hash($"{base64Header}.{base64Payload}", jwtOptions.Value.IssuerKey);
+        var base64Signature = cryptoService.HS256Hash($"{base64Header}.{base64Payload}", jwtOptions.Value.IssuerSigningKey);
         return $"{base64Header}.{base64Payload}.{base64Signature}";
     }
 

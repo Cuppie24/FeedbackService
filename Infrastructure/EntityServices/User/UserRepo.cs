@@ -1,15 +1,27 @@
-﻿using Application.EntityServices.User;
-using Infrastructure.Database;
-using Microsoft.EntityFrameworkCore;
+using Application.EntityServices.User;
+using Dapper;
+using MySqlConnector;
 
 namespace Infrastructure.EntityServices.User;
 
-public class UserRepo(AppDbContext db) : IUserRepo
+public class UserRepo(MySqlDataSource dataSource) : IUserRepo
 {
-    public Task<Domain.Entities.User?> GetUser(int id)
+    private const string SelectUser =
+        "SELECT UserId AS Id, UserName AS Username, PW AS PasswordHash FROM refers.m_user";
+
+    public async Task<Domain.Entities.User?> GetUser(int id)
     {
-        return db.Users
-            .AsNoTracking()
-            .FirstOrDefaultAsync(user => user.Id == id);
+        await using var connection = await dataSource.OpenConnectionAsync();
+        return await connection.QueryFirstOrDefaultAsync<Domain.Entities.User>(
+            $"{SelectUser} WHERE UserId = @id",
+            new { id });
+    }
+
+    public async Task<Domain.Entities.User?> GetUserByUsername(string username)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync();
+        return await connection.QueryFirstOrDefaultAsync<Domain.Entities.User>(
+            $"{SelectUser} WHERE UserName = @username",
+            new { username });
     }
 }

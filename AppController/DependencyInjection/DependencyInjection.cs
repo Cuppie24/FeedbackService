@@ -2,6 +2,7 @@
 using AppController.Authentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace AppController.DependencyInjection;
@@ -19,6 +20,7 @@ public static class DependencyInjection
         var jwtOptions = config.GetSection("Jwt");
         ValidateJwtOptions(jwtOptions);
         
+        services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidation>();
         services.AddOptionsWithValidateOnStart<JwtOptions>()
             .BindConfiguration("Jwt");
         

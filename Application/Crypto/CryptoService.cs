@@ -15,9 +15,11 @@ public class CryptoService : ICryptoService
         return result.ToString();
     }
 
-    public string HmacSha256Hash(string text, string key)
+    public string HS256Hash(string text, string key)
     {
-        throw new NotImplementedException();
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key));
+        var bytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(text));
+        return Base64UrlEncode(bytes);
     }
     
     public string Base64UrlEncode(byte[] input)

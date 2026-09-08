@@ -1,11 +1,11 @@
-﻿using Application.EntityServices.RefreshToken;
+using Application.EntityServices.RefreshToken;
 using Application.EntityServices.User;
-using Infrastructure.Database;
+using Dapper;
 using Infrastructure.EntityServices.RefreshToken;
 using Infrastructure.EntityServices.User;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MySqlConnector;
 
 namespace Infrastructure;
 
@@ -13,13 +13,16 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration config)
     {
-        var connectionString = config.GetConnectionString("DefaultConnection");
-        if (string.IsNullOrWhiteSpace(connectionString))
+        var dbConnectionString = config.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(dbConnectionString))
             throw new InvalidOperationException("Connection string 'DefaultConnection' is required");
 
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseMySql(connectionString, new MySqlServerVersion(new Version(9, 2, 0)))
-                .UseSnakeCaseNamingConvention());
+        // Dapper maps snake_case columns (user_id, is_revoked, created_at) onto
+        // PascalCase entity properties. Columns whose name differs beyond casing
+        // (m_user.PW, m_user.UserId -> User.Id) are still aliased explicitly in SQL.
+        DefaultTypeMap.MatchNamesWithUnderscores = true;
+
+        services.AddMySqlDataSource(dbConnectionString);
 
         services.AddScoped<IUserRepo, UserRepo>();
         services.AddScoped<IRefreshTokenRepo, RefreshTokenRepo>();

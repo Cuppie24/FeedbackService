@@ -25,7 +25,13 @@ public class AuthNController(IOptions<JwtOptions> jwtOptions,
         var token = await authNService.AuthenticateAsync(request);
         if (string.IsNullOrWhiteSpace(token))
             return StatusCode(StatusCodes.Status500InternalServerError);
-        _ = Request.Cookies.Append(new KeyValuePair<string, string>(jwtOptions.Value.CookieName, token));
+        Response.Cookies.Append(jwtOptions.Value.CookieName, token, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTimeOffset.UtcNow.AddMinutes(jwtOptions.Value.ExpireMinutes)
+        });
         return Ok(new {Token = token});
     }
 }

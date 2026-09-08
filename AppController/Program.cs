@@ -27,6 +27,14 @@ app.MapControllers();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
+//
+// var scope = app.Services.CreateScope();
+// var cryptoService = scope.ServiceProvider.GetRequiredService<ICryptoService>();
+// Console.WriteLine("Input login:");
+// var username = Console.ReadLine();
+// Console.WriteLine("Input password:");
+// var password = Console.ReadLine();
+// var hash = cryptoService.Md5Hash(password + username?.ToUpper() ?? "");
+// Console.WriteLine(hash);
 
 app.Run();
