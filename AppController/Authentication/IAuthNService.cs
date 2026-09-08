@@ -5,7 +5,7 @@ namespace AppController.Authentication;
 public interface IAuthNService
 {
     /// <returns>Jwt token on successful authentication</returns>
-    Task<string?> AuthenticateAsync(AuthRequest request);
+    Task<AuthNTokens> AuthenticateAsync(AuthRequest request, string? refreshToken = null);
     bool IsAuthenticated(string token);
-    Task<TokenRefreshResponse?> Refresh(string refreshToken);
+    Task<string?> RotateRefreshTokens(string? refreshToken, int userId);
 }

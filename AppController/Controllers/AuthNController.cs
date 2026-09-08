@@ -22,16 +22,16 @@ public class AuthNController(IOptions<JwtOptions> jwtOptions,
     [HttpPost]
     public async Task<IActionResult> Login(AuthRequest request)
     {
-        var token = await authNService.AuthenticateAsync(request);
-        if (string.IsNullOrWhiteSpace(token))
-            return StatusCode(StatusCodes.Status500InternalServerError);
-        Response.Cookies.Append(jwtOptions.Value.CookieName, token, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Lax,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(jwtOptions.Value.ExpireMinutes)
-        });
-        return Ok(new {Token = token});
+        // var token = await authNService.AuthenticateAsync(request);
+        // if (string.IsNullOrWhiteSpace(token))
+        //     return StatusCode(StatusCodes.Status500InternalServerError);
+        // Response.Cookies.Append(jwtOptions.Value.CookieName, token, new CookieOptions
+        // {
+        //     HttpOnly = true,
+        //     Secure = true,
+        //     SameSite = SameSiteMode.Lax,
+        //     Expires = DateTimeOffset.UtcNow.AddMinutes(jwtOptions.Value.ExpireMinutes)
+        // });
+        // return Ok(new {Token = token});
     }
 }

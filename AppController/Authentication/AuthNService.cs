@@ -16,10 +16,11 @@ public class AuthNService(
     ICryptoService cryptoService,
     IConfiguration config,
     ILogger<AuthNService> logger,
-    IOptions<JwtOptions> jwtOptions
+    IOptions<JwtOptions> jwtOptions,
+    IPasswordValidator passwordValidator
 ) : IAuthNService
 {
-    public async Task<string?> AuthenticateAsync(AuthRequest request)
+    public async Task<AuthNTokens> AuthenticateAsync(AuthRequest request, string? refreshToken = null)
     {
         var user = await userRepo.GetUserByUsername(request.Username);
         if (user is null)
@@ -28,9 +29,18 @@ public class AuthNService(
             return null;
         }
         
-        var hash = cryptoService.Md5Hash(request.Password + request.Username?.ToUpper());
-        if (hash.Equals(user.PasswordHash))
-            return GenerateToken(user);
+        var isPasswordValid = await passwordValidator.ValidatePassword(request);
+        if (isPasswordValid)
+        {
+            string newRefreshToken;
+            newRefreshToken = await RotateRefreshTokens(refreshToken, user);
+            var token = GenerateToken(user);
+            var result = new AuthNTokens
+            {
+                RefreshToken = newRefreshToken,
+                Token = token
+            }
+        }
         logger.LogWarning("Failed to authenticate user {Username}", request.Username);
         return null;
     }
@@ -51,7 +61,7 @@ public class AuthNService(
             return false;
         }
 
-        var hash = cryptoService.HS256Hash(string.Concat(tokenParts[0], ".", tokenParts[1]), issuerSigningKey);
+        var hash = cryptoService.Hs256Hash(string.Concat(tokenParts[0], ".", tokenParts[1]), issuerSigningKey);
         if (!CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(hash),
                Encoding.UTF8.GetBytes(tokenParts[2])))
@@ -63,62 +73,9 @@ public class AuthNService(
         return true;
     }
 
-    public async Task<TokenRefreshResponse?> Refresh(string refreshToken)
-    {
-        var oldRefreshToken = await refreshTokenRepo.GetAsync(refreshToken);
-        if (oldRefreshToken is null)
-        {
-            logger.LogDebug("Refresh token {RefreshToken} not found", refreshToken);
-            logger.LogError("Refresh token not found");
-            return null;
-        }
-
-        if (oldRefreshToken.ExpiresAt < DateTime.UtcNow.AddMinutes(-5))
-        {
-            logger.LogInformation("Attempt to use expired token. Id: {Id}", oldRefreshToken.Id);
-            return null;
-        }
-
-        if (oldRefreshToken.IsRevoked)
-        {
-            logger.LogWarning("Attempt to use revoked token. Id: {Id}", oldRefreshToken.Id);
-            return null;
-        }
-
-        var user  = await userRepo.GetUser(oldRefreshToken.UserId);
-        if (user is null)
-        {
-            logger.LogError("User {UserId} not found on token {TokenId} refresh try", oldRefreshToken.UserId, oldRefreshToken.Id);
-            return null;
-        }
-
-        var refreshTokenText = GenerateRefreshToken();
-        var newRefreshToken = new RefreshToken
-        {
-            UserId = oldRefreshToken.UserId,
-            Token = refreshTokenText,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(jwtOptions.Value.RefreshExpiresMinutes),
-            ReplacedByTokenId = null,
-            IsRevoked = false,
-            RevokedAt = null,
-        };
-        
-        var newId = await refreshTokenRepo.CreateAsync(newRefreshToken);
-        if (!newId.HasValue)
-        {
-            logger.LogError("Error while creating refresh token");
-            return null;
-        }
-            
-        await refreshTokenRepo.RevokeAsync(oldRefreshToken.Id, newId.Value);
-
-        var result = new TokenRefreshResponse()
-        {
-            RefreshToken = refreshTokenText,
-            Token = GenerateToken(user)
-        };
-        return result;
-    }
+    // Rotation lives in the repository so the create + revoke run in one DB transaction.
+    public Task<string?> RotateRefreshTokens(string? refreshToken, int userId) =>
+        refreshTokenRepo.RotateRefreshAsync(refreshToken, userId);
     
     private string GenerateToken(User user)
     {
@@ -137,13 +94,7 @@ public class AuthNService(
 
         var base64Header = cryptoService.Base64UrlEncode(Encoding.UTF8.GetBytes(headerJson ?? ""));
         var base64Payload = cryptoService.Base64UrlEncode(Encoding.UTF8.GetBytes(payloadJson ?? ""));
-        var base64Signature = cryptoService.HS256Hash($"{base64Header}.{base64Payload}", jwtOptions.Value.IssuerSigningKey);
+        var base64Signature = cryptoService.Hs256Hash($"{base64Header}.{base64Payload}", jwtOptions.Value.IssuerSigningKey);
         return $"{base64Header}.{base64Payload}.{base64Signature}";
-    }
-
-    private string GenerateRefreshToken()
-    {
-        var randomBytes = RandomNumberGenerator.GetBytes(32);
-        return Convert.ToBase64String(randomBytes);
     }
 }
