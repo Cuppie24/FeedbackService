@@ -1,3 +1,4 @@
+using System.Text;
 using Application.EntityServices.RefreshToken;
 using Dapper;
 using Microsoft.Extensions.Logging;
@@ -7,8 +8,6 @@ namespace Infrastructure.EntityServices.RefreshToken;
 
 public class RefreshTokenRepo(MySqlDataSource dataSource, ILogger<RefreshTokenRepo> logger) : IRefreshTokenRepo
 {
-    // MatchNamesWithUnderscores (set in DI) maps user_id/expires_at/... to the
-    // matching PascalCase properties, so no per-column aliases are needed here.
     private const string SelectColumns =
         "id, token, user_id, expires_at, replaced_by_token_id, is_revoked, revoked_at, created_at, updated_at";
 
@@ -40,14 +39,14 @@ public class RefreshTokenRepo(MySqlDataSource dataSource, ILogger<RefreshTokenRe
 
         await using var connection = await dataSource.OpenConnectionAsync();
         var affected = await connection.ExecuteAsync(
-            """
-            UPDATE refresh_tokens
-            SET is_revoked = 1,
-                revoked_at = @now,
-                replaced_by_token_id = @replacedByTokenId,
-                updated_at = @now
-            WHERE id = @id AND is_revoked = 0
-            """,
+            $"""
+             UPDATE refresh_tokens
+             SET is_revoked = 1,
+                 revoked_at = @now,
+                 replaced_by_token_id = @replacedByTokenId,
+                 updated_at = @now
+             WHERE id = @id AND is_revoked = 0
+             """,
             new { id, replacedByTokenId, now });
 
         if (affected == 0)
@@ -55,7 +54,7 @@ public class RefreshTokenRepo(MySqlDataSource dataSource, ILogger<RefreshTokenRe
                 "Refresh token {TokenId} was not revoked: it does not exist or is already revoked", id);
     }
 
-    public async Task<int?> CreateAsync(Domain.Entities.RefreshToken? refreshToken)
+    public async Task<int?> CreateAsync(Domain.Entities.RefreshToken? refreshToken, int? previousTokenToRevokeId = null)
     {
         if (refreshToken is null)
         {
@@ -68,9 +67,10 @@ public class RefreshTokenRepo(MySqlDataSource dataSource, ILogger<RefreshTokenRe
         refreshToken.UpdatedAt = now;
 
         await using var connection = await dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
         try
         {
-            return await connection.ExecuteScalarAsync<int>(
+            var newId = await connection.ExecuteScalarAsync<int>(
                 """
                 INSERT INTO refresh_tokens
                     (token, user_id, expires_at, replaced_by_token_id, is_revoked, revoked_at, created_at, updated_at)
@@ -78,10 +78,33 @@ public class RefreshTokenRepo(MySqlDataSource dataSource, ILogger<RefreshTokenRe
                     (@Token, @UserId, @ExpiresAt, @ReplacedByTokenId, @IsRevoked, @RevokedAt, @CreatedAt, @UpdatedAt);
                 SELECT LAST_INSERT_ID();
                 """,
-                refreshToken);
+                refreshToken, transaction);
+
+            if (previousTokenToRevokeId.HasValue)
+            {
+                var revoked = await connection.ExecuteAsync(
+                    """
+                    UPDATE refresh_tokens
+                    SET is_revoked = 1,
+                        revoked_at = @now,
+                        replaced_by_token_id = @newId,
+                        updated_at = @now
+                    WHERE id = @previousTokenToRevokeId AND is_revoked = 0
+                    """,
+                    new { now, newId, previousTokenToRevokeId }, transaction);
+
+                if (revoked == 0)
+                    logger.LogWarning(
+                        "Previous refresh token {TokenId} was not revoked on rotation: it does not exist or is already revoked",
+                        previousTokenToRevokeId);
+            }
+
+            await transaction.CommitAsync();
+            return newId;
         }
         catch (MySqlException e)
         {
+            await transaction.RollbackAsync();
             logger.LogError(e, "Failed to create a refresh token for user {UserId}", refreshToken.UserId);
             return null;
         }
