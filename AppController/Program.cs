@@ -1,14 +1,14 @@
-using System.Runtime.CompilerServices;
-using AppController.DependencyInjection;
+using AppController;
 using Application;
-using Application.Crypto;
 using Infrastructure;
+using DependencyInjection = AppController.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllerServices();
 builder.Services.AddApplicationServices();
+builder.Services.AddCorsServices(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddControllers();
@@ -25,6 +25,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 app.UseHttpsRedirection();
+app.UseCors(DependencyInjection.CorsPolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
 

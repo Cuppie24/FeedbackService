@@ -20,7 +20,7 @@ public class AuthNService(
     IPasswordValidator passwordValidator
 ) : IAuthNService
 {
-    public async Task<AuthNTokens> AuthenticateAsync(AuthRequest request, string? refreshToken = null)
+    public async Task<AuthNTokens?> AuthenticateAsync(AuthRequest request, string? refreshToken = null)
     {
         var user = await userRepo.GetUserByUsername(request.Username);
         if (user is null)
@@ -32,14 +32,24 @@ public class AuthNService(
         var isPasswordValid = await passwordValidator.ValidatePassword(request);
         if (isPasswordValid)
         {
-            string newRefreshToken;
-            newRefreshToken = await RotateRefreshTokens(refreshToken, user);
-            var token = GenerateToken(user);
+            var newRefreshTokenText = GenerateRefreshToken();
+            var newRefreshToken = new RefreshToken
+            {
+                Token = newRefreshTokenText,
+                UserId = user.Id,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(jwtOptions.Value.RefreshExpireMinutes)
+            };
+            var newRefreshTokenId = await refreshTokenRepo.CreateWithRevokeAsync(newRefreshToken, refreshToken);
+            if (newRefreshTokenId is null)
+                throw new InvalidOperationException("Failed to create new refresh token");
+            
+            var newJwtToken = GenerateJwtToken(user);
             var result = new AuthNTokens
             {
-                RefreshToken = newRefreshToken,
-                Token = token
-            }
+                RefreshToken = newRefreshTokenText,
+                JwtToken = newJwtToken
+            };
+            return result;
         }
         logger.LogWarning("Failed to authenticate user {Username}", request.Username);
         return null;
@@ -73,11 +83,29 @@ public class AuthNService(
         return true;
     }
 
-    // Rotation lives in the repository so the create + revoke run in one DB transaction.
-    public Task<string?> RotateRefreshTokens(string? refreshToken, int userId) =>
-        refreshTokenRepo.RotateRefreshAsync(refreshToken, userId);
-    
-    private string GenerateToken(User user)
+    public async Task<AuthNTokens?> RotateRefreshTokens(string oldRefreshToken)
+    {
+        var newRefreshTokenText = GenerateRefreshToken();
+        var newRefreshToken = new RefreshToken
+        {
+            Token = newRefreshTokenText,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(jwtOptions.Value.RefreshExpireMinutes)
+        };
+        var createdRefreshToken = await refreshTokenRepo.RotateRefreshAsync(newRefreshToken, oldRefreshToken);
+        if (createdRefreshToken is null)
+            return null;
+        var user = await userRepo.GetAsync(createdRefreshToken.UserId);
+        if (user is null)
+            throw new InvalidOperationException("Failed to get user for refresh token");
+        
+        return new AuthNTokens()
+        {
+            RefreshToken = newRefreshToken.Token,
+            JwtToken = GenerateJwtToken(user)
+        };
+    }
+
+    private string GenerateJwtToken(User user)
     {
         var header = new { alg = "HS256", typ = "JWT" };
         var payload = new
@@ -96,5 +124,10 @@ public class AuthNService(
         var base64Payload = cryptoService.Base64UrlEncode(Encoding.UTF8.GetBytes(payloadJson ?? ""));
         var base64Signature = cryptoService.Hs256Hash($"{base64Header}.{base64Payload}", jwtOptions.Value.IssuerSigningKey);
         return $"{base64Header}.{base64Payload}.{base64Signature}";
+    }
+
+    private string GenerateRefreshToken()
+    {
+        return cryptoService.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
     }
 }

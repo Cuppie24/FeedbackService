@@ -8,7 +8,7 @@ public class JwtOptions
     public string Audience { get; set; } = null!;
     public string IssuerSigningKey { get; set; } = null!;
     public int ExpireMinutes { get; set; }
-    public int RefreshExpiresMinutes { get; set; }
+    public int RefreshExpireMinutes { get; set; }
     public string CookieName { get; set; } = null!;
     public string RefreshCookieName { get; set; } = null!;
 }
@@ -29,7 +29,7 @@ public class JwtOptionsValidation : IValidateOptions<JwtOptions>
             return ValidateOptionsResult.Fail("CookieName is required.");
         if(options.ExpireMinutes <= 0)
             return ValidateOptionsResult.Fail("ExpireMinutes must be greater than zero.");
-        if(options.RefreshExpiresMinutes <= 0)
+        if(options.RefreshExpireMinutes <= 0)
             return ValidateOptionsResult.Fail("RefreshExpiresMinutes must be greater than zero.");
         return ValidateOptionsResult.Success;
     }

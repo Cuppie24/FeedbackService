@@ -22,16 +22,30 @@ public class AuthNController(IOptions<JwtOptions> jwtOptions,
     [HttpPost]
     public async Task<IActionResult> Login(AuthRequest request)
     {
-        // var token = await authNService.AuthenticateAsync(request);
-        // if (string.IsNullOrWhiteSpace(token))
-        //     return StatusCode(StatusCodes.Status500InternalServerError);
-        // Response.Cookies.Append(jwtOptions.Value.CookieName, token, new CookieOptions
-        // {
-        //     HttpOnly = true,
-        //     Secure = true,
-        //     SameSite = SameSiteMode.Lax,
-        //     Expires = DateTimeOffset.UtcNow.AddMinutes(jwtOptions.Value.ExpireMinutes)
-        // });
-        // return Ok(new {Token = token});
+        Request.Cookies.TryGetValue(jwtOptions.Value.RefreshCookieName, out var refreshTokenText);
+        var tokens = await authNService.AuthenticateAsync(request, refreshTokenText);
+        if (tokens is null)
+            return Unauthorized();
+        RefreshTokenCookies(tokens);
+        return Ok();
+    }
+
+    [HttpGet("refresh")]
+    public async Task<IActionResult> Refresh()
+    {
+        Request.Cookies.TryGetValue(jwtOptions.Value.RefreshCookieName, out var refreshTokenText);
+        if (string.IsNullOrWhiteSpace(refreshTokenText))
+            return Unauthorized();
+        var tokens = await authNService.RotateRefreshTokens(refreshTokenText);
+        if (tokens is null)
+            return Unauthorized();
+        RefreshTokenCookies(tokens);
+        return Ok();
+    }
+
+    private void RefreshTokenCookies(AuthNTokens tokens)
+    {
+        CookieHelper.SetHttpOnlyCookie(jwtOptions.Value.CookieName, tokens.JwtToken, jwtOptions.Value.ExpireMinutes, Response);
+        CookieHelper.SetHttpOnlyCookie(jwtOptions.Value.RefreshCookieName, tokens.RefreshToken, jwtOptions.Value.RefreshExpireMinutes, Response);
     }
 }

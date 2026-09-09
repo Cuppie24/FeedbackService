@@ -20,5 +20,4 @@ public class Feedback
     public FeedbackType? Type { get; set; }
     public FeedbackStatus? Status { get; set; }
     public AppSystem? System { get; set; }
-    
 }

@@ -1,17 +1,37 @@
 ﻿using System.Text;
 using AppController.Authentication;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace AppController.DependencyInjection;
+namespace AppController;
 
 public static class DependencyInjection
 {
+    public const string CorsPolicyName = "FeedbackCors";
+
+    public static IServiceCollection AddCorsServices(this IServiceCollection services, IConfiguration config)
+    {
+        var allowedOrigins = config.GetSection("Cors:AllowedOrigins").Get<string[]>();
+        if (allowedOrigins is null || allowedOrigins.Length == 0)
+            throw new InvalidOperationException("Cors:AllowedOrigins is required");
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy(CorsPolicyName, policy =>
+                policy.WithOrigins(allowedOrigins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials());
+        });
+        return services;
+    }
+    
+    
     public static IServiceCollection AddControllerServices(this IServiceCollection services)
     {
         services.AddScoped<IAuthNService, AuthNService>();
+        services.AddScoped<IPasswordValidator, PasswordValidator>();
         return services;
     }
     
