@@ -1,6 +1,6 @@
 ﻿namespace AppController.Controllers;
 
-public class CookieHelper
+public abstract class CookieHelper
 {
     public static void SetHttpOnlyCookie(string key, string value, int expireMinutes, HttpResponse response)
     {
