@@ -2,7 +2,7 @@
 
 namespace Domain.Entities;
 
-public class FeedbackMessage
+public class Message
 {
     public int Id { get; set; }
     [MaxLength(10000)] public string Text { get; set; } = null!;

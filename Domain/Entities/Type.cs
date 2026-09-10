@@ -2,7 +2,7 @@
 
 namespace Domain.Entities;
 
-public class FeedbackType
+public class Type
 {
     public int Id { get; set; }
     [MaxLength(100)] public string Name { get; set; } = null!;

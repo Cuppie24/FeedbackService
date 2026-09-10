@@ -1,6 +1,6 @@
 ﻿namespace Domain.Entities;
 
-public class FeedbackStatusHistory
+public class StatusHistory
 {
     public int Id { get; set; }
     public int FeedbackId { get; set; }

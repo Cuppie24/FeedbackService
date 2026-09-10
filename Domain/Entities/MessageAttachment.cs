@@ -1,6 +1,6 @@
 ﻿namespace Domain.Entities;
 
-public class FeedbackAttachment
+public class MessageAttachment
 {
     public int Id { get; set; }
     public string? Path { get; set; }
