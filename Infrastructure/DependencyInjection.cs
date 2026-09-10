@@ -1,6 +1,8 @@
+using Application.EntityServices.Feedback;
 using Application.EntityServices.RefreshToken;
 using Application.EntityServices.User;
 using Dapper;
+using Infrastructure.EntityServices.Feedback;
 using Infrastructure.EntityServices.RefreshToken;
 using Infrastructure.EntityServices.User;
 using Microsoft.Extensions.Configuration;
@@ -26,6 +28,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepo, UserRepo>();
         services.AddScoped<IRefreshTokenRepo, RefreshTokenRepo>();
+        services.AddScoped<IFeedbackRepo, FeedbackRepo>();
 
         return services;
     }
