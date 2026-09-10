@@ -8,9 +8,4 @@ public class FeedbackStatusHistory
     public int ChangerId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
-    // Navigation Properties
-    public Feedback? Feedback { get; set; }
-    public FeedbackStatus? Status { get; set; }
-    public User? Changer { get; set; }
 }

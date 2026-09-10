@@ -7,8 +7,4 @@ public class FeedbackTag
     public int FeedbackId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
-    // Navigation Properties
-    public Tag? Tag { get; set; }
-    public Feedback? Feedback { get; set; }
 }

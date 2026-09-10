@@ -11,8 +11,4 @@ public class RefreshToken
     public DateTime? RevokedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
-    // Navigation Properties
-    public User? User { get; set; }
-    public RefreshToken? ReplacedByToken { get; set; }
 }

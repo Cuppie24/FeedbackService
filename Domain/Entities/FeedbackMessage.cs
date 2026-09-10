@@ -11,8 +11,4 @@ public class FeedbackMessage
     public DateTime SentAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
-    // Navigation Properties
-    public User? User { get; set; } 
-    public Feedback? Feedback { get; set; } 
 }
