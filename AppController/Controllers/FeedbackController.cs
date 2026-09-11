@@ -21,12 +21,4 @@ public class FeedbackController : ControllerBase
     {
         throw new NotImplementedException();
     }
-
-    [HttpGet("can-edit/{id:int}")]
-    [Authorize]
-    public async Task<ActionResult<SimpleResponse<bool>>> CanEditFeedbackAsync(int id)
-    {
-        throw new NotImplementedException();
-        return new SimpleResponse<bool>(false, "You can only edit feedback info within first 5 minutes");
-    }
 }
